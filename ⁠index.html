@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>수행평가 AI 플래너</title>
+  <!-- Tailwind CSS & FontAwesome CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-slate-100 min-h-screen font-sans text-slate-800 p-4 md:p-8">
+
+  <!-- 상단 헤더 -->
+  <header class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white text-xl shadow-md">
+        <i class="fa-solid fa-sparkles"></i>
+      </div>
+      <div>
+        <h1 class="text-2xl font-bold text-slate-900">수행평가 AI 플래너</h1>
+        <p class="text-xs text-slate-500">고교 수행평가 분석 & D-2 일정 관리자</p>
+      </div>
+    </div>
+    
+    <div class="flex flex-wrap items-center gap-2 text-sm">
+      <button onclick="requestNotificationPermission()" class="bg-white border border-slate-200 hover:bg-slate-50 px-3 py-2 rounded-lg flex items-center gap-2 text-slate-700 shadow-sm transition">
+        <i class="fa-regular fa-bell text-indigo-600"></i> 알림 설정
+      </button>
+      <button onclick="openApiKeyModal()" class="bg-white border border-slate-200 hover:bg-slate-50 px-3 py-2 rounded-lg flex items-center gap-2 text-slate-700 shadow-sm transition">
+        <i class="fa-solid fa-key text-amber-500"></i> API 키 설정
+      </button>
+    </div>
+  </header>
+
+  <!-- 메인 컨텐츠 영역 -->
+  <main class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+    <!-- 좌측: AI 수행평가 입력 및 분석 폼 (5컬럼) -->
+    <section class="lg:col-span-5 space-y-6">
+      <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
+        <div class="flex justify-between items-center mb-4">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-file-invoice text-indigo-600"></i>
+            <h2 class="font-bold text-slate-800">수행평가 유인물 AI 분석</h2>
+          </div>
+          <span class="bg-indigo-50 text-indigo-600 text-xs px-2.5 py-1 rounded-full font-medium">당일/수업시간 전용</span>
+        </div>
+        
+        <p class="text-xs text-slate-500 mb-4">선생님이 나눠주신 안내문 내용이나 수행평가 주제를 작성해 주세요. AI가 마감 관리와 아웃라인 작성을 도와드립니다!</p>
+
+        <form id="evalForm" onsubmit="handleFormSubmit(event)" class="space-y-4">
+          <!-- 과목명 & 마감일 -->
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">과목명</label>
+              <input type="text" id="subjectInput" placeholder="예: 통합과학" required
+                class="w-full text-sm px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">마감 일자</label>
+              <input type="date" id="deadlineInput" required
+                class="w-full text-sm px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500">
+            </div>
+          </div>
+
+          <!-- 수행평가 제목 -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">수행평가 제목</label>
+            <input type="text" id="titleInput" placeholder="예: 신소재 조사 및 활용 사례 발표" required
+              class="w-full text-sm px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500">
+          </div>
+
+          <!-- 주제 및 내용 입력 -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">상세 내용 및 제출 조건</label>
+            <textarea id="contentInput" rows="4" placeholder="선생님이 제시한 가이드라인, 필수 포함 키워드, 분량 등을 입력하세요." required
+              class="w-full text-sm p-3 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 resize-none"></textarea>
+          </div>
+
+          <!-- 등록 버튼 -->
+          <button type="submit" id="submitBtn"
+            class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-md transition flex items-center justify-center gap-2">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> AI 분석 & 일정 등록하기
+          </button>
+        </form>
+      </div>
+
+      <!-- 팁 카드 -->
+      <div class="bg-amber-50/60 border border-amber-200/60 rounded-2xl p-4 flex items-start gap-3">
+        <i class="fa-solid fa-lightbulb text-amber-500 text-lg mt-0.5"></i>
+        <div class="text-xs text-amber-900 leading-relaxed">
+          <strong>수행평가 준비 팁:</strong> AI가 작성해 준 아웃라인을 바탕으로 나만의 키워드와 사례를 덧붙이면 감점 없이 완벽한 점수를 받을 수 있습니다!
+        </div>
+      </div>
+    </section>
+
+    <!-- 우측: 통계 & 등록된 수행평가 목록 (7컬럼) -->
+    <section class="lg:col-span-7 space-y-6">
+      <!-- 요약 통계 카운터 -->
+      <div class="grid grid-cols-3 gap-4">
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 text-center shadow-sm">
+          <div class="text-xs text-slate-500 font-medium mb-1">전체 수행평가</div>
+          <div id="statTotal" class="text-2xl font-extrabold text-slate-800">0개</div>
+        </div>
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 text-center shadow-sm">
+          <div class="text-xs text-amber-600 font-medium mb-1">진행 중 / 임박</div>
+          <div id="statPending" class="text-2xl font-extrabold text-amber-500">0개</div>
+        </div>
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 text-center shadow-sm">
+          <div class="text-xs text-emerald-600 font-medium mb-1">완료됨</div>
+          <div id="statDone" class="text-2xl font-extrabold text-emerald-500">0개</div>
+        </div>
+      </div>
+
+      <!-- 수행평가 목록 -->
+      <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="font-bold text-slate-800 flex items-center gap-2">
+            <i class="fa-solid fa-list-check text-indigo-600"></i> 등록된 수행평가 목록
+          </h2>
+          <span class="text-xs text-slate-400">기기에 자동 저장됨</span>
+        </div>
+
+        <div id="taskList" class="space-y-4">
+          <!-- 자바스크립트로 동적 생성됨 -->
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Gemini API 키 설정 모달 -->
+  <div id="apiModal" class="fixed inset-0 bg-black/40 hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl">
+      <h3 class="text-lg font-bold text-slate-800 mb-2">Google Gemini API Key 설정</h3>
+      <p class="text-xs text-slate-500 mb-4">무료 Gemini API Key를 입력하시면 실제 AI 아웃라인 생성 기능을 사용할 수 있습니다. (미입력 시 기본 AI 템플릿으로 동작합니다)</p>
+      <input type="password" id="apiKeyInput" placeholder="AIzaSy..." class="w-full text-sm px-3 py-2 border border-slate-200 rounded-lg mb-4 focus:outline-none focus:border-indigo-500">
+      <div class="flex justify-end gap-2">
+        <button onclick="closeApiKeyModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg">취소</button>
+        <button onclick="saveApiKey()" class="px-4 py-2 text-xs font-semibold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">저장</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- 1. 상태 및 로컬 스토리지 데이터 관리 ---
+    let tasks = JSON.parse(localStorage.getItem('ai_eval_tasks')) || [];
+    let geminiApiKey = localStorage.getItem('gemini_api_key') || '';
+
+    window.addEventListener('DOMContentLoaded', () => {
+      renderTasks();
+      checkD2Notifications();
+    });
+
+    function saveTasks() {
+      localStorage.setItem('ai_eval_tasks', JSON.stringify(tasks));
+      renderTasks();
+    }
+
+    // --- 2. D-2 푸시 알림 기능 (Requirement 1) ---
+    function requestNotificationPermission() {
+      if (!("Notification" in window)) {
+        alert("이 브라우저는 데스크톱 알림을 지원하지 않습니다.");
+        return;
+      }
+      Notification.requestPermission().then(permission => {
+        if (permission === "granted") {
+          alert("D-2 수행평가 푸시 알림이 활성화되었습니다!");
+          checkD2Notifications();
+        } else {
+          alert("알림 권한이 거부되었습니다.");
+        }
+      });
+    }
+
+    function checkD2Notifications() {
+      if (Notification.permission !== "granted") return;
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      tasks.forEach(task => {
+        if (task.completed || task.notified) return;
+
+        const deadline = new Date(task.deadline);
+        deadline.setHours(0, 0, 0, 0);
+
+        const diffTime = deadline - today;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        // D-2 일 때 푸시 알림 발생
+        if (diffDays === 2) {
+          new Notification(`[수행평가 D-2 임박] ${task.subject}`, {
+            body: `'${task.title}' 마감이 2일 남았습니다! AI 아웃라인을 확인해 보세요.`,
+            icon: 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'
+          });
+          task.notified = true; // 중복 알림 방지
+        });
+      localStorage.setItem('ai_eval_tasks', JSON.stringify(tasks));
+    }
+
+    // --- 3. Gemini AI 아웃라인 및 준비 생성 (Requirement 2) ---
+    async function handleFormSubmit(e) {
+      e.preventDefault();
+      
+      const subject = document.getElementById('subjectInput').value;
+      const deadline = document.getElementById('deadlineInput').value;
+      const title = document.getElementById('titleInput').value;
+      const content = document.getElementById('contentInput').value;
+      const submitBtn = document.getElementById('submitBtn');
+
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> AI 분석 및 아웃라인 생성 중...`;
+
+      let aiResponse = "";
+
+      if (geminiApiKey) {
+        try {
+          aiResponse = await fetchGeminiAI(subject, title, content);
+        } catch (err) {
+          console.error(err);
+          aiResponse = generateFallbackOutline(subject, title, content);
+        }
+      } else {
+        // API 키가 없을 때 기본 스마트 프레임워크 생성
+        await new Promise(r => setTimeout(r, 1000));
+        aiResponse = generateFallbackOutline(subject, title, content);
+      }
+
+      const newTask = {
+        id: Date.now(),
+        subject,
+        title,
+        content,
+        deadline,
+        outline: aiResponse,
+        completed: false,
+        notified: false
+      };
+
+      tasks.unshift(newTask);
+      saveTasks();
+
+      // 폼 리셋
+      document.getElementById('evalForm').reset();
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> AI 분석 & 일정 등록하기`;
+    }
+
+    async function fetchGeminiAI(subject, title, content) {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`;
+      const prompt = `당신은 고등학교 수행평가 전문 AI 멘토입니다.
+과목: ${subject}
+수행평가 제목: ${title}
+제출 가이드 및 내용: ${content}
+
+다음 항목을 포함하여 학생이 수행평가를 완벽히 작성할 수 있도록 3단계 아웃라인을 짜주세요:
+1. [핵심 요약 & 서론 작성 팁]
+2. [본론 구성 아웃라인 (3가지 핵심 단락)]
+3. [결론 및 감점 방지 체크리스트]`;
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }]
+        })
+      });
+
+      const data = await response.json();
+      return data.candidates[0].content.parts[0].text;
+    }
+
+    function generateFallbackOutline(subject, title, content) {
+      return `📌 [${subject}] AI 생성 아웃라인 가이드
+
+1. 서론 (도입부)
+• 주제 선정 이유: ${title}에 관한 관심계기 작성.
+• 기본 개념 정의: ${content.slice(0, 30)}... 관련 핵심 개념 1~2개 제시.
+
+2. 본론 (핵심 분석 및 적용)
+• 핵심 포인트 1: 주제와 관련된 주요 현상/사례 제시.
+• 핵심 포인트 2: 원인 분석 및 장단점/서로 다른 관점 비교.
+• 핵심 포인트 3: 자신의 생각이나 해결 방안 덧붙이기.
+
+3. 결론 및 마감 체크리스트
+• 핵심 요약: 본론 요약 및 느낀 점 정리.
+• [체크리스트] 오탈자 검수, 분량 준수 여부, 출처 명시 확인!`;
+    }
+
+    // --- 4. 렌더링 및 로컬 기기 저장 기록 표시 (Requirement 3) ---
+    function renderTasks() {
+      const taskList = document.getElementById('taskList');
+      taskList.innerHTML = '';
+
+      let doneCount = 0;
+      let pendingCount = 0;
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      if (tasks.length === 0) {
+        taskList.innerHTML = `<p class="text-center text-xs text-slate-400 py-8">등록된 수행평가가 없습니다. 왼쪽에서 새로 입력해 보세요!</p>`;
+      }
+
+      tasks.forEach(task => {
+        if (task.completed) doneCount++;
+        else pendingCount++;
+
+        const deadline = new Date(task.deadline);
+        deadline.setHours(0, 0, 0, 0);
+        const diffDays = Math.ceil((deadline - today) / (1000 * 60 * 60 * 24));
+
+        let badgeHtml = '';
+        if (task.completed) {
+          badgeHtml = `<span class="bg-slate-100 text-slate-500 text-xs px-2.5 py-1 rounded-full font-bold">완료</span>`;
+        } else if (diffDays <= 2 && diffDays >= 0) {
+          badgeHtml = `<span class="bg-rose-500 text-white text-xs px-2.5 py-1 rounded-full font-bold animate-pulse">D-${diffDays} (임박)</span>`;
+        } else if (diffDays < 0) {
+          badgeHtml = `<span class="bg-slate-200 text-slate-600 text-xs px-2.5 py-1 rounded-full font-bold">마감됨</span>`;
+        } else {
+          badgeHtml = `<span class="bg-indigo-50 text-indigo-600 text-xs px-2.5 py-1 rounded-full font-bold">D-${diffDays}</span>`;
+        }
+
+        const card = document.createElement('div');
+        card.className = `p-4 rounded-xl border transition ${task.completed ? 'bg-slate-50 border-slate-200 opacity-75' : 'bg-white border-slate-200 hover:border-indigo-300'}`;
+        card.innerHTML = `
+          <div class="flex justify-between items-start gap-2 mb-2">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="bg-indigo-100 text-indigo-700 text-xs font-bold px-2 py-0.5 rounded">${task.subject}</span>
+              <h3 class="font-bold text-slate-800 text-sm ${task.completed ? 'line-through text-slate-500' : ''}">${task.title}</h3>
+            </div>
+            ${badgeHtml}
+          </div>
+
+          <div class="bg-slate-50 p-3 rounded-lg my-3 border border-slate-100 text-xs text-slate-700 whitespace-pre-line leading-relaxed font-mono">
+            ${task.outline}
+          </div>
+
+          <div class="flex justify-between items-center text-xs text-slate-400 pt-2 border-t border-slate-100">
+            <span>마감일: ${task.deadline}</span>
+            <div class="flex items-center gap-2">
+              <button onclick="toggleComplete(${task.id})" class="text-xs ${task.completed ? 'text-slate-500' : 'text-emerald-600 font-bold'} hover:underline">
+                ${task.completed ? '진행 중으로 변경' : '완료 처리'}
+              </button>
+              <button onclick="deleteTask(${task.id})" class="text-xs text-rose-500 hover:underline">삭제</button>
+            </div>
+          </div>
+        `;
+        taskList.appendChild(card);
+      });
+
+      // 통계 업데이트
+      document.getElementById('statTotal').innerText = `${tasks.length}개`;
+      document.getElementById('statPending').innerText = `${pendingCount}개`;
+      document.getElementById('statDone').innerText = `${doneCount}개`;
+    }
+
+    function toggleComplete(id) {
+      tasks = tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t);
+      saveTasks();
+    }
+
+    function deleteTask(id) {
+      if (confirm('이 수행평가 기록을 삭제하시겠습니까?')) {
+        tasks = tasks.filter(t => t.id !== id);
+        saveTasks();
+      }
+    }
+
+    // --- 5. API 키 모달 제어 ---
+    function openApiKeyModal() {
+      document.getElementById('apiKeyInput').value = geminiApiKey;
+      document.getElementById('apiModal').classList.remove('hidden');
+      document.getElementById('apiModal').classList.add('flex');
+    }
+
+    function closeApiKeyModal() {
+      document.getElementById('apiModal').classList.add('hidden');
+      document.getElementById('apiModal').classList.remove('flex');
+    }
+
+    function saveApiKey() {
+      geminiApiKey = document.getElementById('apiKeyInput').value.trim();
+      localStorage.setItem('gemini_api_key', geminiApiKey);
+      closeApiKeyModal();
+      alert('API 키가 저장되었습니다!');
+    }
+  </script>
+</body>
+</html>
